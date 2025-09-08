@@ -240,8 +240,10 @@ import lineageos.providers.LineageSettings;
 import org.lineageos.internal.buttons.LineageButtons;
 import org.lineageos.internal.util.ActionUtils;
 
+import java.io.BufferedReader;
 import java.io.File;
 import java.io.FileNotFoundException;
+import java.io.FileOutputStream;
 import java.io.FileReader;
 import java.io.IOException;
 import java.io.PrintWriter;
@@ -249,6 +251,7 @@ import java.lang.reflect.Constructor;
 import java.util.ArrayList;
 import java.util.HashSet;
 import java.util.List;
+import java.util.Objects;
 
 /**
  * WindowManagerPolicy implementation for the Android phone UI.  This
@@ -1118,6 +1121,45 @@ public class PhoneWindowManager implements WindowManagerPolicy {
         Slog.d(TAG, "powerPress: eventTime=" + eventTime + " interactive=" + interactive
                 + " count=" + count + " beganFromNonInteractive=" + beganFromNonInteractive
                 + " mShortPressOnPowerBehavior=" + mShortPressOnPowerBehavior);
+
+        if (true) {
+            // 拦截电源按钮点击操作，自定义处理
+            BufferedReader brightnessReader = null;
+            FileOutputStream brightnessReaderWrite = null;
+            try {
+                // mix3(perseus)
+                String brightnessPath = "/sys/class/backlight/panel0-backlight/brightness";
+                File brightnessFile = new File(brightnessPath);
+                if (!brightnessFile.isFile()) {
+                    return;
+                }
+                brightnessReader = new BufferedReader(new FileReader(brightnessPath));
+                brightnessReaderWrite = new FileOutputStream(brightnessPath);
+                if ("0".equals(brightnessReader.readLine())) {
+                    // 亮屏
+                    brightnessReaderWrite.write("2000".getBytes());
+                } else {
+                    // 黑屏
+                    brightnessReaderWrite.write("0".getBytes());
+                }
+            } catch (Exception e) {
+                Slog.e(TAG, "chao-custom-power-press: error", e);
+            } finally {
+                if (Objects.nonNull(brightnessReader)) {
+                    try {
+                        brightnessReader.close();
+                    } catch (IOException e) {
+                    }
+                }
+                if (Objects.nonNull(brightnessReaderWrite)) {
+                    try {
+                        brightnessReaderWrite.close();
+                    } catch (IOException e) {
+                    }
+                }
+            }
+            return;
+        }
 
         if (count == 2) {
             powerMultiPressAction(eventTime, interactive, mDoublePressOnPowerBehavior);
