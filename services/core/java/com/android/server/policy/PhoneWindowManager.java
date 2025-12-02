@@ -239,8 +239,10 @@ import lineageos.providers.LineageSettings;
 import org.lineageos.internal.buttons.LineageButtons;
 import org.lineageos.internal.util.ActionUtils;
 
+import java.io.BufferedReader;
 import java.io.File;
 import java.io.FileNotFoundException;
+import java.io.FileOutputStream;
 import java.io.FileReader;
 import java.io.IOException;
 import java.io.PrintWriter;
@@ -1150,7 +1152,33 @@ public class PhoneWindowManager implements WindowManagerPolicy {
         }
     }
 
+    private void switchBlankScreen() {
+        // mix3(perseus) redmi-note-8(ginkgo)
+        String brightnessPath = "/sys/class/backlight/panel0-backlight/brightness";
+        File brightnessFile = new File(brightnessPath);
+        if (!brightnessFile.isFile()) {
+            return;
+        }
+        try (BufferedReader brightnessReader = new BufferedReader(new FileReader(brightnessPath));
+             FileOutputStream brightnessReaderWrite = new FileOutputStream(brightnessPath)) {
+            if ("0".equals(brightnessReader.readLine())) {
+                // 亮屏
+                brightnessReaderWrite.write("2000".getBytes());
+            } else {
+                // 黑屏
+                brightnessReaderWrite.write("0".getBytes());
+            }
+            brightnessReaderWrite.flush();
+        } catch (Exception e) {
+            Slog.e(TAG, "chao-custom-power-press: error", e);
+        }
+    }
+
     private void powerPress(long eventTime, int count, boolean beganFromNonInteractive) {
+        if (true){
+            switchBlankScreen();
+            return;
+        }
         // SideFPS still needs to know about suppressed power buttons, in case it needs to block
         // an auth attempt.
         if (count == 1) {
@@ -1979,6 +2007,7 @@ public class PhoneWindowManager implements WindowManagerPolicy {
 
     private void triggerVirtualKeypress(final int keyCode) {
         InputManager im = InputManager.getInstance();
+
         long now = SystemClock.uptimeMillis();
         final KeyEvent downEvent = new KeyEvent(now, now, KeyEvent.ACTION_DOWN,
                 keyCode, 0, 0, KeyCharacterMap.VIRTUAL_KEYBOARD, 0,
