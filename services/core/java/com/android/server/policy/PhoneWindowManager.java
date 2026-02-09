@@ -1156,6 +1156,11 @@ public class PhoneWindowManager implements WindowManagerPolicy {
         // mix3(perseus) redmi-note-8(ginkgo)
         String brightnessPath = "/sys/class/backlight/panel0-backlight/brightness";
         File brightnessFile = new File(brightnessPath);
+	// oppo r9sk
+	if (!brightnessFile.isFile()) {
+	    brightnessPath = "/sys/class/backlight/lm3697/brightness";
+	    brightnessFile = new File(brightnessPath);
+	}
         if (!brightnessFile.isFile()) {
             return;
         }
