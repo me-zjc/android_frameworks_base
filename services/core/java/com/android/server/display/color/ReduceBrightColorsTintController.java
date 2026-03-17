@@ -21,12 +21,19 @@ import static com.android.server.display.color.DisplayTransformManager.LEVEL_COL
 import android.content.Context;
 import android.hardware.display.ColorDisplayManager;
 import android.opengl.Matrix;
+import android.os.Handler;
+import android.os.Looper;
+import android.os.SystemProperties;
+import android.util.BrightnessUtils;
 import android.util.Slog;
+import android.widget.Toast;
 
 import com.android.internal.R;
 
+import java.io.File;
 import java.io.PrintWriter;
 import java.util.Arrays;
+import java.util.Objects;
 
 /**
  * Control the color transform for bright color reduction.
@@ -38,8 +45,11 @@ public class ReduceBrightColorsTintController extends TintController {
 
     private int mStrength;
 
+    private Context mContext;
+
     @Override
     public void setUp(Context context, boolean needsLinear) {
+        this.mContext = context;
         final String[] coefficients = context.getResources().getStringArray(
                 needsLinear ? R.array.config_reduceBrightColorsCoefficients
                         : R.array.config_reduceBrightColorsCoefficientsNonlinear);
@@ -103,6 +113,19 @@ public class ReduceBrightColorsTintController extends TintController {
         super.setActivated(isActivated);
         Slog.i(ColorDisplayService.TAG, (isActivated != null && isActivated)
                 ? "Turning on reduce bright colors" : "Turning off reduce bright colors");
+        File brightnessFile = BrightnessUtils.getBrightnessFile();
+        if (Objects.isNull(brightnessFile)) {
+            new Handler(Looper.getMainLooper()).post(
+                    () -> Toast.makeText(mContext, "当前机型不支持息屏", Toast.LENGTH_LONG).show());
+            return;
+        }
+        if (Boolean.TRUE.equals(isActivated)) {
+            BrightnessUtils.switchBlankScreen(true);
+            SystemProperties.set("persist.sys.block_touch", "1");
+        } else {
+            BrightnessUtils.switchBlankScreen(false);
+            SystemProperties.set("persist.sys.block_touch", "0");
+        }
     }
 
     public int getStrength() {

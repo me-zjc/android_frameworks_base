@@ -169,6 +169,7 @@ import android.service.dreams.IDreamManager;
 import android.service.vr.IPersistentVrStateCallbacks;
 import android.speech.RecognizerIntent;
 import android.telecom.TelecomManager;
+import android.util.BrightnessUtils;
 import android.util.Log;
 import android.util.MutableBoolean;
 import android.util.PrintWriterPrinter;
@@ -250,6 +251,7 @@ import java.lang.reflect.Constructor;
 import java.util.ArrayList;
 import java.util.HashSet;
 import java.util.List;
+import java.util.Objects;
 import java.util.Set;
 
 /**
@@ -1152,36 +1154,25 @@ public class PhoneWindowManager implements WindowManagerPolicy {
         }
     }
 
-    private void switchBlankScreen() {
-        // mix3(perseus) redmi-note-8(ginkgo)
-        String brightnessPath = "/sys/class/backlight/panel0-backlight/brightness";
-        File brightnessFile = new File(brightnessPath);
-	// oppo r9sk
-	if (!brightnessFile.isFile()) {
-	    brightnessPath = "/sys/class/backlight/lm3697/brightness";
-	    brightnessFile = new File(brightnessPath);
-	}
-        if (!brightnessFile.isFile()) {
-            return;
+    private boolean disableReduceBright() {
+        File brightnessFile = BrightnessUtils.getBrightnessFile();
+        boolean reduceBrightEnable = Settings.Secure.getInt(
+                mContext.getContentResolver(),
+                Settings.Secure.REDUCE_BRIGHT_COLORS_ACTIVATED,
+                0) == 1;
+        // 有屏幕文件且息屏开启则屏幕亮度调为最亮并关闭息屏
+        if (Objects.nonNull(brightnessFile) && reduceBrightEnable) {
+            Settings.Secure.putInt(
+                    mContext.getContentResolver(),
+                    Settings.Secure.REDUCE_BRIGHT_COLORS_ACTIVATED,
+                    0);
+            return true;
         }
-        try (BufferedReader brightnessReader = new BufferedReader(new FileReader(brightnessPath));
-             FileOutputStream brightnessReaderWrite = new FileOutputStream(brightnessPath)) {
-            if ("0".equals(brightnessReader.readLine())) {
-                // 亮屏
-                brightnessReaderWrite.write("2000".getBytes());
-            } else {
-                // 黑屏
-                brightnessReaderWrite.write("0".getBytes());
-            }
-            brightnessReaderWrite.flush();
-        } catch (Exception e) {
-            Slog.e(TAG, "chao-custom-power-press: error", e);
-        }
+        return false;
     }
 
     private void powerPress(long eventTime, int count, boolean beganFromNonInteractive) {
-        if (true){
-            switchBlankScreen();
+        if (disableReduceBright()){
             return;
         }
         // SideFPS still needs to know about suppressed power buttons, in case it needs to block
