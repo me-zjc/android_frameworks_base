@@ -1189,6 +1189,12 @@ public class DisplayRotation {
                 mUserRotationMode == WindowManagerPolicy.USER_ROTATION_LOCKED
                         ? "USER_ROTATION_LOCKED" : "");
 
+        // 息屏时锁定当前方向
+        int lock = SystemProperties.getInt("persist.sys.block_touch", 0);
+        if (lock == 1) {
+            return lastRotation;
+        }
+
         if (isFixedToUserRotation()) {
             return mUserRotation;
         }
