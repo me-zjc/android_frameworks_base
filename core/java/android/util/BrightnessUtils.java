@@ -10,6 +10,7 @@ import java.util.Objects;
 
 /**
  * 亮度文件相关工具
+ *
  * @hide
  */
 public class BrightnessUtils {
@@ -49,18 +50,25 @@ public class BrightnessUtils {
         if (Objects.isNull(brightnessFile)) {
             return;
         }
-        try (BufferedReader brightnessReader = new BufferedReader(new FileReader(brightnessFile));
-             FileOutputStream brightnessReaderWrite = new FileOutputStream(brightnessFile)) {
-            if (!blank) {
-                // 亮屏
-                brightnessReaderWrite.write("800".getBytes());
-            } else {
-                // 黑屏
-                brightnessReaderWrite.write("0".getBytes());
+        String targetValue = blank ? "0" : "800";
+        try {
+            // 读取当前亮度
+            String currentValue;
+            try (BufferedReader reader = new BufferedReader(new FileReader(brightnessFile))) {
+                currentValue = reader.readLine();
             }
-            brightnessReaderWrite.flush();
+            // 判断是否需要写
+            if (targetValue.equals(currentValue)) {
+                // 已经是目标值，直接返回
+                return;
+            }
+            // 写入新值
+            try (FileOutputStream fos = new FileOutputStream(brightnessFile)) {
+                fos.write(targetValue.getBytes());
+                fos.flush();
+            }
         } catch (Exception e) {
-            Slog.e(TAG, "chao-custom-power-press: error", e);
+            Slog.e(TAG, "switchBlankScreen error", e);
         }
     }
 
