@@ -5893,7 +5893,7 @@ public class ActivityTaskManagerService extends IActivityTaskManager.Stub {
                     Slog.e(TAG, "Build fingerprint is not consistent, warning user");
                     mUiHandler.post(() -> {
                         if (mShowDialogs) {
-                            AlertDialog d = new BaseErrorDialog(mUiContext);
+/*                            AlertDialog d = new BaseErrorDialog(mUiContext);
                             d.getWindow().setType(WindowManager.LayoutParams.TYPE_SYSTEM_ERROR);
                             d.setCancelable(false);
                             d.setTitle(mUiContext.getText(R.string.android_system_label));
@@ -5901,7 +5901,7 @@ public class ActivityTaskManagerService extends IActivityTaskManager.Stub {
                             d.setButton(DialogInterface.BUTTON_POSITIVE,
                                     mUiContext.getText(R.string.ok),
                                     mUiHandler.obtainMessage(DISMISS_DIALOG_UI_MSG, d));
-                            d.show();
+                            d.show();*/
                         }
                     });
                 }
