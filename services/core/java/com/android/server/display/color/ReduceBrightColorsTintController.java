@@ -23,12 +23,14 @@ import android.hardware.display.ColorDisplayManager;
 import android.opengl.Matrix;
 import android.os.Handler;
 import android.os.Looper;
+import android.os.ServiceManager;
 import android.os.SystemProperties;
 import android.util.BrightnessUtils;
 import android.util.Slog;
 import android.widget.Toast;
 
 import com.android.internal.R;
+import com.android.internal.statusbar.IStatusBarService;
 
 import java.io.File;
 import java.io.PrintWriter;
@@ -122,6 +124,16 @@ public class ReduceBrightColorsTintController extends TintController {
         if (Boolean.TRUE.equals(isActivated)) {
             BrightnessUtils.switchBlankScreen(true);
             SystemProperties.set("persist.sys.block_touch", "1");
+            // 息幕时关闭下拉栏
+            IStatusBarService statusBar = IStatusBarService.Stub.asInterface(
+                    ServiceManager.getService("statusbar"));
+            if (statusBar != null) {
+                try {
+                    statusBar.collapsePanels();
+                } catch (Exception e) {
+                    Slog.e(ColorDisplayService.TAG, "collapsePanels failed", e);
+                }
+            }
         } else {
             BrightnessUtils.switchBlankScreen(false);
             SystemProperties.set("persist.sys.block_touch", "0");
