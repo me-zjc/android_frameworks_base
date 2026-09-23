@@ -34,6 +34,7 @@ import android.util.Size;
 import com.android.internal.annotations.VisibleForTesting;
 
 import java.io.IOException;
+import java.util.Locale;
 
 /** A class to extract Drawables from a MessagingStyle/ConversationStyle message. */
 public class LocalImageResolver {
@@ -215,6 +216,7 @@ public class LocalImageResolver {
     private static Drawable resolveImage(ImageDecoder.Source source, int maxWidth, int maxHeight) {
         try {
             return ImageDecoder.decodeDrawable(source, (decoder, info, unused) -> {
+                checkHeader(info);
                 if (maxWidth <= 0 || maxHeight <= 0) {
                     return;
                 }
@@ -239,9 +241,9 @@ public class LocalImageResolver {
             });
 
         // ImageDecoder documentation is misleading a bit - it'll throw NotFoundException
-        // in some cases despite it not saying so. Rethrow it as an IOException to keep
-        // our API contract.
-        } catch (IOException | Resources.NotFoundException e) {
+        // in some cases despite it not saying so. We also throw a RuntimeException if the
+        // image size is unreasonable (see checkHeader).
+        } catch (IOException | RuntimeException e) {
             Log.d(TAG, "Couldn't use ImageDecoder for drawable, falling back to non-resized load.");
             return null;
         }
@@ -254,7 +256,41 @@ public class LocalImageResolver {
 
     private static void onHeaderDecoded(ImageDecoder decoder, ImageDecoder.ImageInfo info,
             int maxWidth, int maxHeight) {
+        checkHeader(info);
         final Size size = info.getSize();
+
+        final int originalSize = Math.max(size.getHeight(), size.getWidth());
+        final int maxSize = Math.max(maxWidth, maxHeight);
+        final double ratio = (originalSize > maxSize)
+                ? originalSize * 1f / maxSize
+                : 1.0;
+        decoder.setTargetSampleSize(getPowerOfTwoForSampleRatio(ratio));
+    }
+
+    private static void checkHeader(ImageDecoder.ImageInfo info) {
+        final Size size = info.getSize();
+
+        final String mimeType = info.getMimeType();
+        boolean isAllowedCodec = false;
+        if (mimeType != null) {
+            switch (mimeType.toLowerCase(Locale.US)) {
+                case "image/png":
+                case "image/jpeg":
+                case "image/webp":
+                case "image/gif":
+                case "image/bmp":
+                case "image/x-ico":
+                case "image/vnd.wap.wbmp":
+                case "image/heif":
+                case "image/heic":
+                case "image/avif":
+                    isAllowedCodec = true;
+                    break;
+            }
+        }
+        if (!isAllowedCodec) {
+            throw new RuntimeException("Image mime type (" + mimeType + ") is not allowed.");
+        }
 
         if (size.getWidth() > DEFAULT_DECODE_HARD_LIMIT_PX
                 || size.getHeight() > DEFAULT_DECODE_HARD_LIMIT_PX) {
@@ -264,13 +300,6 @@ public class LocalImageResolver {
                     "Image dimensions (" + size.getWidth() + "x" + size.getHeight()
                             + ") exceed the maximum allowed size.");
         }
-
-        final int originalSize = Math.max(size.getHeight(), size.getWidth());
-        final int maxSize = Math.max(maxWidth, maxHeight);
-        final double ratio = (originalSize > maxSize)
-                ? originalSize * 1f / maxSize
-                : 1.0;
-        decoder.setTargetSampleSize(getPowerOfTwoForSampleRatio(ratio));
     }
 
     /**

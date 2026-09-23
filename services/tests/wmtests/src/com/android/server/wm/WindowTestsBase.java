@@ -87,6 +87,7 @@ import android.view.DisplayInfo;
 import android.view.Gravity;
 import android.view.IDisplayWindowInsetsController;
 import android.view.IWindow;
+import android.view.IWindowSessionCallback;
 import android.view.InsetsFrameProvider;
 import android.view.InsetsSourceControl;
 import android.view.InsetsState;
@@ -446,6 +447,15 @@ class WindowTestsBase extends SystemServiceTestsBase {
         statusBar.mAttrs.setFitInsetsTypes(0);
         dc.getDisplayPolicy().addWindowLw(statusBar, statusBar.mAttrs);
         return statusBar;
+    }
+
+    static Session createTestSession(ActivityTaskManagerService atms, int pid, int uid) {
+        // This method is a partial backport which omits process creation.
+        return new Session(atms.mWindowManager, new IWindowSessionCallback.Stub() {
+            @Override
+            public void onAnimatorScaleChanged(float scale) {
+            }
+        }, pid, uid);
     }
 
     WindowState createAppWindow(Task task, int type, String name) {
@@ -1006,6 +1016,7 @@ class WindowTestsBase extends SystemServiceTestsBase {
         private int mLaunchedFromUid;
         private String mLaunchedFromPackage;
         private WindowProcessController mWpc;
+        private Intent mIntent;
         private Bundle mIntentExtras;
         private boolean mOnTop = false;
         private ActivityInfo.WindowLayout mWindowLayout;
@@ -1023,6 +1034,11 @@ class WindowTestsBase extends SystemServiceTestsBase {
 
         ActivityBuilder setTargetActivity(String targetActivity) {
             mTargetActivity = targetActivity;
+            return this;
+        }
+
+        ActivityBuilder setIntent(Intent intent) {
+            mIntent = intent;
             return this;
         }
 
@@ -1166,8 +1182,10 @@ class WindowTestsBase extends SystemServiceTestsBase {
                 mComponent = getUniqueComponentName();
             }
 
-            Intent intent = new Intent();
-            intent.setComponent(mComponent);
+            Intent intent = mIntent != null ? mIntent : new Intent();
+            if (mIntent == null) {
+                intent.setComponent(mComponent);
+            }
             if (mIntentExtras != null) {
                 intent.putExtras(mIntentExtras);
             }
